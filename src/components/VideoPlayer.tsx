@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import Hls from 'hls.js';
 import { Volume2, VolumeX, Maximize2, RefreshCw } from 'lucide-react';
 import type { PlayerProps } from '../types';
+import { useStore } from '../store/useStore';
 
 export function VideoPlayer({ 
   channel, 
@@ -12,9 +13,30 @@ export function VideoPlayer({
 }: PlayerProps) {
   const playerRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hls, setHls] = useState<Hls | null>(null);
+  const currentChannel = useStore(state => state.currentChannel);
+  const setCurrentChannel = useStore(state => state.setCurrentChannel);
+
+  useEffect(() => {
+    if (!currentChannel && channel.id === '1') {
+      setCurrentChannel(channel);
+      setIsMuted(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (playerRef.current) {
+      const shouldBeMuted = currentChannel?.id !== channel.id;
+      playerRef.current.muted = shouldBeMuted;
+      setIsMuted(shouldBeMuted);
+      
+      if (!shouldBeMuted) {
+        playerRef.current.volume = channel.volume;
+      }
+    }
+  }, [currentChannel, channel.id, channel.volume]);
 
   useEffect(() => {
     if (isFullscreen && containerRef.current) {
@@ -81,6 +103,7 @@ export function VideoPlayer({
   }, [channel.urls, channel.currentSourceIndex]);
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
     const volume = parseFloat(e.target.value);
     if (playerRef.current) {
       playerRef.current.volume = volume;
@@ -90,10 +113,14 @@ export function VideoPlayer({
 
   const toggleMute = () => {
     if (playerRef.current) {
-      const newMuted = !isMuted;
-      playerRef.current.muted = newMuted;
-      setIsMuted(newMuted);
-      onVolumeChange(channel.id, newMuted ? 0 : channel.volume || 1);
+      if (isMuted) {
+        setCurrentChannel(channel);
+        const defaultVolume = 0.5;
+        playerRef.current.volume = defaultVolume;
+        onVolumeChange(channel.id, defaultVolume);
+      } else if (currentChannel?.id === channel.id) {
+        setCurrentChannel(null);
+      }
     }
   };
 
@@ -136,6 +163,7 @@ export function VideoPlayer({
         autoPlay
         playsInline
         controls
+        muted={isMuted}
       />
 
       {error && (
@@ -154,15 +182,17 @@ export function VideoPlayer({
           >
             {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
           </button>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={channel.volume}
-            onChange={handleVolumeChange}
-            className="w-24 accent-blue-500"
-          />
+          {!isMuted && (
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={channel.volume}
+              onChange={handleVolumeChange}
+              className="w-24 accent-blue-500"
+            />
+          )}
         </div>
       </div>
     </div>
