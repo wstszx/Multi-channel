@@ -7,6 +7,7 @@ import { Language, t } from './locales';
 
 const DEFAULT_M3U_URL = 'https://iptv-org.github.io/iptv/index.m3u';
 const CHANNELS_PER_PAGE = 9;
+const LANGUAGE_STORAGE_KEY = 'preferred_language';
 
 function App() {
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -19,7 +20,15 @@ function App() {
   const [pageInput, setPageInput] = useState('1');
   const [isRandomMode, setIsRandomMode] = useState(false);
   const [randomChannels, setRandomChannels] = useState<Channel[]>([]);
-  const [language, setLanguage] = useState<Language>('zh');
+  const [language, setLanguage] = useState<Language>(() => {
+    const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    return (savedLanguage === 'en' || savedLanguage === 'zh') ? savedLanguage : 'zh';
+  });
+
+  // Save language preference when it changes
+  useEffect(() => {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  }, [language]);
 
   const loadChannels = useCallback(async (url: string) => {
     setLoading(true);
