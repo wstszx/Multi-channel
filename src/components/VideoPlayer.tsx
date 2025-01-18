@@ -178,7 +178,6 @@ export function VideoPlayer({
           className="w-full h-full object-contain"
           autoPlay
           playsInline
-          controls
           muted={isMuted}
         />
       </div>
