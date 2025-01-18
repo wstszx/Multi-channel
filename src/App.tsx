@@ -21,15 +21,15 @@ function App() {
   const [fullscreenId, setFullscreenId] = useState<string | null>(null);
 
   const handleVolumeChange = useCallback((id: string, volume: number) => {
-    setChannels(prev =>
-      prev.map(channel =>
+    setChannels((prev: Channel[]) =>
+      prev.map((channel: Channel) =>
         channel.id === id ? { ...channel, volume } : channel
       )
     );
   }, []);
 
   const handleFullscreenClick = useCallback((id: string) => {
-    setFullscreenId(prev => (prev === id ? null : id));
+    setFullscreenId((prev: string | null) => (prev === id ? null : id));
   }, []);
 
   const handleChannelConfigSave = useCallback((updatedChannels: Channel[]) => {
@@ -40,7 +40,7 @@ function App() {
     <div className="min-h-screen bg-gray-950 p-4 md:p-6">
       <div className="max-w-[1920px] mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {channels.map(channel => (
+          {channels.map((channel: Channel) => (
             <VideoPlayer
               key={channel.id}
               channel={channel}
