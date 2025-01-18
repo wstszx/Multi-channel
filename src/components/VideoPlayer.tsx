@@ -45,11 +45,22 @@ export function VideoPlayer({
   }, [currentChannel, channel.id, channel.volume]);
 
   useEffect(() => {
-    if (isFullscreen && containerRef.current) {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      } else {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isFullscreen) {
+        onFullscreenClick(channel.id);
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [isFullscreen, channel.id, onFullscreenClick]);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      if (isFullscreen && !document.fullscreenElement) {
         containerRef.current.requestFullscreen();
+      } else if (!isFullscreen && document.fullscreenElement) {
+        document.exitFullscreen();
       }
     }
   }, [isFullscreen]);
