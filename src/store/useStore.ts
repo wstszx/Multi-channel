@@ -14,7 +14,7 @@ interface Store {
   playlists: PlaylistInfo[];
   loading: boolean;
   setChannels: (channels: Channel[]) => void;
-  setCurrentChannel: (channel: Channel) => void;
+  setCurrentChannel: (channel: Channel | null) => void;
   toggleFavorite: (channelId: string) => void;
   addPlaylist: (playlist: PlaylistInfo) => void;
   setLoading: (loading: boolean) => void;

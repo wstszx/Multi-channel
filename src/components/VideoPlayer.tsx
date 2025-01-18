@@ -70,7 +70,7 @@ export function VideoPlayer({
         newHls.loadSource(currentUrl);
       });
 
-      newHls.on(Hls.Events.ERROR, (event, data) => {
+      newHls.on(Hls.Events.ERROR, (_, data) => {
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
