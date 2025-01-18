@@ -14,6 +14,7 @@ function App() {
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [m3uUrl, setM3uUrl] = useState(DEFAULT_M3U_URL);
   const [tempUrl, setTempUrl] = useState(DEFAULT_M3U_URL);
+  const [pageInput, setPageInput] = useState('1');
 
   const loadChannels = useCallback(async (url: string) => {
     setLoading(true);
@@ -73,6 +74,23 @@ function App() {
     });
   }, [channels.length]);
 
+  const handlePageInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setPageInput(e.target.value);
+  }, []);
+
+  const handlePageSubmit = useCallback(() => {
+    const value = parseInt(pageInput);
+    if (!isNaN(value) && value > 0) {
+      const totalPages = Math.ceil(channels.length / CHANNELS_PER_PAGE);
+      const newPage = Math.min(value - 1, totalPages - 1);
+      setCurrentPage(newPage);
+    }
+  }, [pageInput, channels.length]);
+
+  useEffect(() => {
+    setPageInput((currentPage + 1).toString());
+  }, [currentPage]);
+
   const handleUrlSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     setM3uUrl(tempUrl);
@@ -97,7 +115,7 @@ function App() {
     <div className="h-screen bg-gray-950 flex flex-col overflow-hidden">
       <div className="max-w-[1920px] w-full mx-auto px-4 md:px-6 py-4">
         <div className="flex justify-between items-center">
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <button
               onClick={handlePrevPage}
               className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700"
@@ -110,9 +128,29 @@ function App() {
             >
               下一页
             </button>
-            <span className="text-white px-4 py-2">
-              {currentPage + 1} / {totalPages} 页
-            </span>
+            <div className="flex items-center gap-2 text-white">
+              <span>跳转到:</span>
+              <input
+                type="number"
+                min="1"
+                max={totalPages}
+                value={pageInput}
+                onChange={handlePageInputChange}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handlePageSubmit();
+                  }
+                }}
+                className="w-16 px-2 py-1 bg-gray-800 rounded border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-center"
+              />
+              <span>/ {totalPages} 页</span>
+              <button
+                onClick={handlePageSubmit}
+                className="px-3 py-1 bg-gray-800 text-white rounded hover:bg-gray-700"
+              >
+                跳转
+              </button>
+            </div>
           </div>
           <button
             onClick={() => {
