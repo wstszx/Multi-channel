@@ -1,5 +1,6 @@
-import React, { useRef, useEffect, useCallback } from 'react';
-import ReactPlayer from 'react-player';
+import React, { useRef, useEffect, useState } from 'react';
+import Hls from 'hls.js';
+import { Volume2, VolumeX, Maximize2, RefreshCw } from 'lucide-react';
 import type { PlayerProps } from '../types';
 
 export function VideoPlayer({ 
@@ -7,41 +8,98 @@ export function VideoPlayer({
   isFullscreen, 
   onVolumeChange, 
   onFullscreenClick,
-  onSourceChange,
-  onAuthRequired,
-  authCredentials
+  onSourceChange
 }: PlayerProps) {
-  const playerRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hls, setHls] = useState<Hls | null>(null);
 
   useEffect(() => {
-    if (isFullscreen && playerRef.current) {
+    if (isFullscreen && containerRef.current) {
       if (document.fullscreenElement) {
         document.exitFullscreen();
       } else {
-        playerRef.current.requestFullscreen();
+        containerRef.current.requestFullscreen();
       }
     }
   }, [isFullscreen]);
 
-  const handleSourceChange = useCallback(() => {
-    if (onSourceChange && channel.urls.length > 1) {
-      const nextIndex = ((channel.currentSourceIndex ?? 0) + 1) % channel.urls.length;
-      onSourceChange(channel.id, nextIndex);
+  useEffect(() => {
+    if (!playerRef.current) return;
+
+    const video = playerRef.current;
+    const currentUrl = channel.urls[channel.currentSourceIndex ?? 0];
+
+    if (hls) {
+      hls.destroy();
     }
-  }, [channel.id, channel.urls.length, channel.currentSourceIndex, onSourceChange]);
 
-  const handleError = useCallback((e: any) => {
-    console.error('Video error:', e);
-    
-    // 当遇到任何错误（包括认证错误）时，直接切换到下一个源
-    handleSourceChange();
-  }, [handleSourceChange]);
+    if (Hls.isSupported()) {
+      const newHls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        backBufferLength: 90,
+      });
 
-  const currentUrl = channel.urls[channel.currentSourceIndex ?? 0];
+      newHls.attachMedia(video);
+      newHls.on(Hls.Events.MEDIA_ATTACHED, () => {
+        newHls.loadSource(currentUrl);
+      });
+
+      newHls.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.error('Network error:', data);
+              setError('网络错误，正在尝试切换源...');
+              onSourceChange?.(channel.id, ((channel.currentSourceIndex ?? 0) + 1) % channel.urls.length);
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.error('Media error:', data);
+              newHls.recoverMediaError();
+              break;
+            default:
+              console.error('Fatal error:', data);
+              newHls.destroy();
+              break;
+          }
+        }
+      });
+
+      setHls(newHls);
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = currentUrl;
+    }
+
+    return () => {
+      if (hls) {
+        hls.destroy();
+      }
+    };
+  }, [channel.urls, channel.currentSourceIndex]);
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const volume = parseFloat(e.target.value);
+    if (playerRef.current) {
+      playerRef.current.volume = volume;
+      onVolumeChange(channel.id, volume);
+    }
+  };
+
+  const toggleMute = () => {
+    if (playerRef.current) {
+      const newMuted = !isMuted;
+      playerRef.current.muted = newMuted;
+      setIsMuted(newMuted);
+      onVolumeChange(channel.id, newMuted ? 0 : channel.volume || 1);
+    }
+  };
 
   return (
     <div
-      ref={playerRef}
+      ref={containerRef}
       className={`relative bg-black rounded-lg overflow-hidden ${
         isFullscreen ? 'fixed inset-0 z-50' : 'aspect-video'
       }`}
@@ -57,63 +115,56 @@ export function VideoPlayer({
         <div className="flex-grow" />
         {channel.urls.length > 1 && (
           <button
-            onClick={handleSourceChange}
+            onClick={() => onSourceChange?.(channel.id, ((channel.currentSourceIndex ?? 0) + 1) % channel.urls.length)}
             className="text-white hover:text-gray-300 transition-colors px-2"
             title="切换源"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-            </svg>
+            <RefreshCw className="w-5 h-5" />
           </button>
         )}
         <button
           onClick={() => onFullscreenClick(channel.id)}
           className="text-white hover:text-gray-300 transition-colors"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="w-5 h-5"
-          >
-            {isFullscreen ? (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"
-              />
-            ) : (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"
-              />
-            )}
-          </svg>
+          <Maximize2 className="w-5 h-5" />
         </button>
       </div>
-      <ReactPlayer
-        url={currentUrl}
-        width="100%"
-        height="100%"
-        playing
+
+      <video
+        ref={playerRef}
+        className="w-full h-full"
+        autoPlay
+        playsInline
         controls
-        volume={channel.volume}
-        onVolumeChange={(e: any) => onVolumeChange(channel.id, e.target.volume)}
-        onError={handleError}
-        config={{
-          file: {
-            forceHLS: true,
-            hlsOptions: {
-              xhrSetup: function(xhr: XMLHttpRequest) {
-                xhr.withCredentials = true;
-              }
-            }
-          }
-        }}
       />
+
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+          <div className="text-white text-center">
+            <p>{error}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={toggleMute}
+            className="text-white hover:text-gray-300 transition-colors"
+          >
+            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          </button>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.1"
+            value={channel.volume}
+            onChange={handleVolumeChange}
+            className="w-24 accent-blue-500"
+          />
+        </div>
+      </div>
     </div>
   );
 }

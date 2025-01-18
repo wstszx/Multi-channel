@@ -3,7 +3,7 @@ import { VideoPlayer } from './components/VideoPlayer';
 import type { Channel } from './types';
 import { parseM3U } from './utils/m3uParser';
 
-const DEFAULT_M3U_URL = 'https://raw.githubusercontent.com/wstszx/TV/refs/heads/master/output/result.m3u';
+const DEFAULT_M3U_URL = 'https://iptv-org.github.io/iptv/index.m3u';
 const CHANNELS_PER_PAGE = 9;
 
 function App() {
@@ -13,6 +13,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [m3uUrl, setM3uUrl] = useState(DEFAULT_M3U_URL);
+  const [tempUrl, setTempUrl] = useState(DEFAULT_M3U_URL);
 
   const loadChannels = useCallback(async (url: string) => {
     setLoading(true);
@@ -74,9 +75,9 @@ function App() {
 
   const handleUrlSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
+    setM3uUrl(tempUrl);
     setShowUrlInput(false);
-    loadChannels(m3uUrl);
-  }, [loadChannels, m3uUrl]);
+  }, [tempUrl]);
 
   if (loading) {
     return (
@@ -114,7 +115,10 @@ function App() {
             </span>
           </div>
           <button
-            onClick={() => setShowUrlInput(true)}
+            onClick={() => {
+              setTempUrl(m3uUrl);
+              setShowUrlInput(true);
+            }}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
           >
             设置M3U链接
@@ -144,8 +148,8 @@ function App() {
                 <input
                   type="url"
                   id="m3u-url"
-                  value={m3uUrl}
-                  onChange={(e) => setM3uUrl(e.target.value)}
+                  value={tempUrl}
+                  onChange={(e) => setTempUrl(e.target.value)}
                   className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder="请输入 M3U 链接地址"
                   required

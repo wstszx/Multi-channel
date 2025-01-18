@@ -24,16 +24,20 @@ export async function parseM3U(url: string): Promise<M3UChannel[]> {
       if (line.startsWith('#EXTINF:')) {
         // Parse the EXTINF line
         const matches = {
+          id: line.match(/tvg-id="([^"]*)"/) ?? [],
           name: line.match(/tvg-name="([^"]*)"/) ?? [],
           logo: line.match(/tvg-logo="([^"]*)"/) ?? [],
           group: line.match(/group-title="([^"]*)"/) ?? [],
           displayName: line.match(/,([^,]*)$/) ?? []
         };
         
+        // Get the display name from the end of the line after the last comma
+        const displayName = line.split(',').pop()?.trim() || 'Unknown Channel';
+        
         currentChannel = {
-          name: matches.name[1] || matches.displayName[1] || 'Unknown Channel',
+          name: matches.name[1] || displayName,
           logo: matches.logo[1] || '',
-          group: matches.group[1] || 'Uncategorized'
+          group: matches.group[1] || 'Undefined'
         };
       } else if (line.startsWith('http')) {
         // This is the URL line
@@ -44,24 +48,29 @@ export async function parseM3U(url: string): Promise<M3UChannel[]> {
             channelMap[channelKey] = {
               name: currentChannel.name,
               logo: currentChannel.logo || '',
-              group: currentChannel.group || 'Uncategorized',
+              group: currentChannel.group || 'Undefined',
               urls: []
             };
           }
           
-          channelMap[channelKey].urls.push(line);
+          // 只添加有效的URL
+          if (line.includes('.m3u8')) {
+            channelMap[channelKey].urls.push(line);
+          }
           currentChannel = {};
         }
       }
     }
     
-    // Convert the map back to an array format
-    return Object.values(channelMap).map(channel => ({
-      name: channel.name,
-      logo: channel.logo,
-      group: channel.group,
-      url: channel.urls[0] // Return first URL for compatibility
-    }));
+    // 过滤掉没有有效URL的频道
+    return Object.values(channelMap)
+      .filter(channel => channel.urls.length > 0)
+      .map(channel => ({
+        name: channel.name,
+        logo: channel.logo,
+        group: channel.group,
+        url: channel.urls[0]
+      }));
   } catch (error) {
     console.error('Error parsing M3U file:', error);
     return [];
