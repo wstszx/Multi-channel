@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { VideoPlayer } from './components/VideoPlayer';
+import { Shuffle } from 'lucide-react';
 import type { Channel } from './types';
 import { parseM3U } from './utils/m3uParser';
 
@@ -15,6 +16,8 @@ function App() {
   const [m3uUrl, setM3uUrl] = useState(DEFAULT_M3U_URL);
   const [tempUrl, setTempUrl] = useState(DEFAULT_M3U_URL);
   const [pageInput, setPageInput] = useState('1');
+  const [isRandomMode, setIsRandomMode] = useState(false);
+  const [randomChannels, setRandomChannels] = useState<Channel[]>([]);
 
   const loadChannels = useCallback(async (url: string) => {
     setLoading(true);
@@ -49,7 +52,14 @@ function App() {
         channel.id === id ? { ...channel, volume } : channel
       )
     );
-  }, []);
+    if (isRandomMode) {
+      setRandomChannels(prev =>
+        prev.map(channel =>
+          channel.id === id ? { ...channel, volume } : channel
+        )
+      );
+    }
+  }, [isRandomMode]);
 
   const handleFullscreenClick = useCallback((id: string) => {
     setFullscreenId(prev => (prev === id ? null : id));
@@ -63,16 +73,46 @@ function App() {
     );
   }, []);
 
+  const toggleRandomMode = useCallback(() => {
+    if (!isRandomMode) {
+      const shuffled = [...channels].sort(() => Math.random() - 0.5);
+      const selectedChannels = shuffled.slice(0, CHANNELS_PER_PAGE).map(channel => {
+        const originalChannel = channels.find(c => c.id === channel.id);
+        return originalChannel || channel;
+      });
+      setRandomChannels(selectedChannels);
+    }
+    setIsRandomMode(!isRandomMode);
+  }, [channels, isRandomMode]);
+
   const handleNextPage = useCallback(() => {
-    setCurrentPage(prev => (prev + 1) % Math.ceil(channels.length / CHANNELS_PER_PAGE));
-  }, [channels.length]);
+    if (isRandomMode) {
+      const shuffled = [...channels].sort(() => Math.random() - 0.5);
+      const selectedChannels = shuffled.slice(0, CHANNELS_PER_PAGE).map(channel => {
+        const originalChannel = channels.find(c => c.id === channel.id);
+        return originalChannel || channel;
+      });
+      setRandomChannels(selectedChannels);
+    } else {
+      setCurrentPage(prev => (prev + 1) % Math.ceil(channels.length / CHANNELS_PER_PAGE));
+    }
+  }, [channels.length, isRandomMode, channels]);
 
   const handlePrevPage = useCallback(() => {
-    setCurrentPage(prev => {
-      const totalPages = Math.ceil(channels.length / CHANNELS_PER_PAGE);
-      return (prev - 1 + totalPages) % totalPages;
-    });
-  }, [channels.length]);
+    if (isRandomMode) {
+      const shuffled = [...channels].sort(() => Math.random() - 0.5);
+      const selectedChannels = shuffled.slice(0, CHANNELS_PER_PAGE).map(channel => {
+        const originalChannel = channels.find(c => c.id === channel.id);
+        return originalChannel || channel;
+      });
+      setRandomChannels(selectedChannels);
+    } else {
+      setCurrentPage(prev => {
+        const totalPages = Math.ceil(channels.length / CHANNELS_PER_PAGE);
+        return (prev - 1 + totalPages) % totalPages;
+      });
+    }
+  }, [channels.length, isRandomMode, channels]);
 
   const handlePageInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setPageInput(e.target.value);
@@ -106,10 +146,12 @@ function App() {
   }
 
   const totalPages = Math.ceil(channels.length / CHANNELS_PER_PAGE);
-  const currentChannels = channels.slice(
-    currentPage * CHANNELS_PER_PAGE,
-    (currentPage + 1) * CHANNELS_PER_PAGE
-  );
+  const displayedChannels = isRandomMode
+    ? randomChannels
+    : channels.slice(
+        currentPage * CHANNELS_PER_PAGE,
+        (currentPage + 1) * CHANNELS_PER_PAGE
+      );
 
   return (
     <div className="h-screen bg-gray-950 flex flex-col overflow-hidden">
@@ -128,28 +170,45 @@ function App() {
             >
               下一页
             </button>
-            <div className="flex items-center gap-2 text-white">
-              <span>跳转到:</span>
-              <input
-                type="number"
-                min="1"
-                max={totalPages}
-                value={pageInput}
-                onChange={handlePageInputChange}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handlePageSubmit();
-                  }
-                }}
-                className="w-16 px-2 py-1 bg-gray-800 rounded border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-center"
-              />
-              <span>/ {totalPages} 页</span>
-              <button
-                onClick={handlePageSubmit}
-                className="px-3 py-1 bg-gray-800 text-white rounded hover:bg-gray-700"
-              >
-                跳转
-              </button>
+            {!isRandomMode && (
+              <div className="flex items-center gap-2 text-white">
+                <span>跳转到:</span>
+                <input
+                  type="number"
+                  min="1"
+                  max={totalPages}
+                  value={pageInput}
+                  onChange={handlePageInputChange}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handlePageSubmit();
+                    }
+                  }}
+                  className="w-16 px-2 py-1 bg-gray-800 rounded border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-center"
+                />
+                <span>/ {totalPages} 页</span>
+                <button
+                  onClick={handlePageSubmit}
+                  className="px-3 py-1 bg-gray-800 text-white rounded hover:bg-gray-700"
+                >
+                  跳转
+                </button>
+              </div>
+            )}
+            <button
+              onClick={toggleRandomMode}
+              className={`px-4 py-2 rounded transition-colors ${
+                isRandomMode 
+                  ? 'bg-blue-600 text-white hover:bg-blue-500' 
+                  : 'bg-gray-800 text-white hover:bg-gray-700'
+              }`}
+              title={isRandomMode ? '返回普通模式' : '随机播放模式'}
+            >
+              <Shuffle className="w-5 h-5" />
+            </button>
+            <div className="text-white ml-4">
+              共 {channels.length} 个频道
+              {isRandomMode && ' (随机显示9个)'}
             </div>
           </div>
           <button
@@ -166,7 +225,7 @@ function App() {
       <div className="flex-1 overflow-hidden">
         <div className="h-full max-w-[1920px] w-full mx-auto px-4 md:px-6">
           <div className="grid h-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
-            {currentChannels.map(channel => (
+            {displayedChannels.map(channel => (
               <VideoPlayer
                 key={channel.id}
                 channel={channel}
