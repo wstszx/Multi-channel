@@ -128,14 +128,14 @@ export function VideoPlayer({
     <div
       ref={containerRef}
       className={`relative bg-black rounded-lg overflow-hidden ${
-        isFullscreen ? 'fixed inset-0 z-50' : 'aspect-video'
+        isFullscreen ? 'fixed inset-0 z-50' : 'w-full h-full'
       }`}
     >
       <div className="absolute top-0 left-0 right-0 p-2 bg-gradient-to-b from-black/70 to-transparent z-10 flex items-center gap-2">
         {channel.logo && (
           <img src={channel.logo} alt={channel.name} className="w-6 h-6 object-contain" />
         )}
-        <span className="text-white text-sm font-medium">
+        <span className="text-white text-sm font-medium truncate">
           {channel.name}
           {channel.urls.length > 1 && ` (源 ${(channel.currentSourceIndex ?? 0) + 1}/${channel.urls.length})`}
         </span>
@@ -157,14 +157,16 @@ export function VideoPlayer({
         </button>
       </div>
 
-      <video
-        ref={playerRef}
-        className="w-full h-full"
-        autoPlay
-        playsInline
-        controls
-        muted={isMuted}
-      />
+      <div className="w-full h-full flex items-center justify-center">
+        <video
+          ref={playerRef}
+          className="w-full h-full object-contain"
+          autoPlay
+          playsInline
+          controls
+          muted={isMuted}
+        />
+      </div>
 
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80">

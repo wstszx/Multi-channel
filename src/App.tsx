@@ -81,7 +81,7 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-white text-xl">Loading channels...</div>
       </div>
     );
@@ -94,9 +94,9 @@ function App() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-950 p-4 md:p-6 relative">
-      <div className="max-w-[1920px] mx-auto">
-        <div className="flex justify-between items-center mb-4">
+    <div className="h-screen bg-gray-950 flex flex-col overflow-hidden">
+      <div className="max-w-[1920px] w-full mx-auto px-4 md:px-6 py-4">
+        <div className="flex justify-between items-center">
           <div className="flex gap-2">
             <button
               onClick={handlePrevPage}
@@ -124,17 +124,21 @@ function App() {
             设置M3U链接
           </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {currentChannels.map(channel => (
-            <VideoPlayer
-              key={channel.id}
-              channel={channel}
-              isFullscreen={channel.id === fullscreenId}
-              onVolumeChange={handleVolumeChange}
-              onFullscreenClick={handleFullscreenClick}
-              onSourceChange={handleSourceChange}
-            />
-          ))}
+      </div>
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full max-w-[1920px] w-full mx-auto px-4 md:px-6">
+          <div className="grid h-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
+            {currentChannels.map(channel => (
+              <VideoPlayer
+                key={channel.id}
+                channel={channel}
+                isFullscreen={channel.id === fullscreenId}
+                onVolumeChange={handleVolumeChange}
+                onFullscreenClick={handleFullscreenClick}
+                onSourceChange={handleSourceChange}
+              />
+            ))}
+          </div>
         </div>
       </div>
       {showUrlInput && (
