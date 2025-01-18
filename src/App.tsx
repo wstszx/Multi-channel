@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { VideoPlayer } from './components/VideoPlayer';
-import { Shuffle } from 'lucide-react';
+import { Shuffle, Globe2 } from 'lucide-react';
 import type { Channel } from './types';
 import { parseM3U } from './utils/m3uParser';
+import { Language, t } from './locales';
 
 const DEFAULT_M3U_URL = 'https://iptv-org.github.io/iptv/index.m3u';
 const CHANNELS_PER_PAGE = 9;
@@ -18,6 +19,7 @@ function App() {
   const [pageInput, setPageInput] = useState('1');
   const [isRandomMode, setIsRandomMode] = useState(false);
   const [randomChannels, setRandomChannels] = useState<Channel[]>([]);
+  const [language, setLanguage] = useState<Language>('zh');
 
   const loadChannels = useCallback(async (url: string) => {
     setLoading(true);
@@ -36,11 +38,11 @@ function App() {
       setCurrentPage(0);
     } catch (error) {
       console.error('Error loading channels:', error);
-      alert('加载频道列表失败，请检查链接是否正确');
+      alert(t(language, 'loadError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     loadChannels(m3uUrl);
@@ -161,7 +163,7 @@ function App() {
   if (loading) {
     return (
       <div className="h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-white text-xl">Loading channels...</div>
+        <div className="text-white text-xl">{t(language, 'loading')}</div>
       </div>
     );
   }
@@ -183,17 +185,17 @@ function App() {
               onClick={handlePrevPage}
               className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700"
             >
-              上一页
+              {t(language, 'prevPage')}
             </button>
             <button
               onClick={handleNextPage}
               className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700"
             >
-              下一页
+              {t(language, 'nextPage')}
             </button>
             {!isRandomMode && (
               <div className="flex items-center gap-2 text-white">
-                <span>跳转到:</span>
+                <span>{t(language, 'jumpTo')}</span>
                 <input
                   type="number"
                   min="1"
@@ -207,12 +209,12 @@ function App() {
                   }}
                   className="w-16 px-2 py-1 bg-gray-800 rounded border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-center"
                 />
-                <span>/ {totalPages} 页</span>
+                <span>/ {totalPages} {t(language, 'page')}</span>
                 <button
                   onClick={handlePageSubmit}
                   className="px-3 py-1 bg-gray-800 text-white rounded hover:bg-gray-700"
                 >
-                  跳转
+                  {t(language, 'jump')}
                 </button>
               </div>
             )}
@@ -223,24 +225,33 @@ function App() {
                   ? 'bg-blue-600 text-white hover:bg-blue-500' 
                   : 'bg-gray-800 text-white hover:bg-gray-700'
               }`}
-              title={isRandomMode ? '返回普通模式' : '随机播放模式'}
+              title={isRandomMode ? t(language, 'normalMode') : t(language, 'randomMode')}
             >
               <Shuffle className="w-5 h-5" />
             </button>
             <div className="text-white ml-4">
-              共 {channels.length} 个频道
-              {isRandomMode && ' (随机显示9个)'}
+              {t(language, 'totalChannels', { count: channels.length })}
+              {isRandomMode && t(language, 'randomDisplay')}
             </div>
           </div>
-          <button
-            onClick={() => {
-              setTempUrl(m3uUrl);
-              setShowUrlInput(true);
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
-          >
-            设置M3U链接
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setLanguage(prev => prev === 'zh' ? 'en' : 'zh')}
+              className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 flex items-center gap-2"
+            >
+              <Globe2 className="w-5 h-5" />
+              {t(language, 'language')}
+            </button>
+            <button
+              onClick={() => {
+                setTempUrl(m3uUrl);
+                setShowUrlInput(true);
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
+            >
+              {t(language, 'setM3uUrl')}
+            </button>
+          </div>
         </div>
       </div>
       <div className="flex-1 overflow-hidden">
@@ -256,6 +267,7 @@ function App() {
                 onSourceChange={handleSourceChange}
                 onRandomChannel={handleRandomChannel}
                 isRandomMode={isRandomMode}
+                language={language}
               />
             ))}
           </div>
@@ -267,7 +279,7 @@ function App() {
             <form onSubmit={handleUrlSubmit} className="space-y-4">
               <div>
                 <label htmlFor="m3u-url" className="block text-white mb-2">
-                  M3U 链接地址
+                  {t(language, 'm3uUrlLabel')}
                 </label>
                 <input
                   type="url"
@@ -275,7 +287,7 @@ function App() {
                   value={tempUrl}
                   onChange={(e) => setTempUrl(e.target.value)}
                   className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  placeholder="请输入 M3U 链接地址"
+                  placeholder={t(language, 'm3uUrlPlaceholder')}
                   required
                 />
               </div>
@@ -285,13 +297,13 @@ function App() {
                   onClick={() => setShowUrlInput(false)}
                   className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600"
                 >
-                  取消
+                  {t(language, 'cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
                 >
-                  确定
+                  {t(language, 'confirm')}
                 </button>
               </div>
             </form>

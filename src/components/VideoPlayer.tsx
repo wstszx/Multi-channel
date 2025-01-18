@@ -3,6 +3,7 @@ import Hls from 'hls.js';
 import { Volume2, VolumeX, Maximize2, RefreshCw, Shuffle } from 'lucide-react';
 import type { PlayerProps } from '../types';
 import { useStore } from '../store/useStore';
+import { t } from '../locales';
 
 export function VideoPlayer({ 
   channel, 
@@ -11,7 +12,8 @@ export function VideoPlayer({
   onFullscreenClick,
   onSourceChange,
   onRandomChannel,
-  isRandomMode
+  isRandomMode,
+  language
 }: PlayerProps) {
   const playerRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -92,7 +94,7 @@ export function VideoPlayer({
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
               console.error('Network error:', data);
-              setError('网络错误，正在尝试切换源...');
+              setError(t(language, 'networkError'));
               onSourceChange?.(channel.id, ((channel.currentSourceIndex ?? 0) + 1) % channel.urls.length);
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
@@ -154,14 +156,17 @@ export function VideoPlayer({
         )}
         <span className="text-white text-sm font-medium truncate">
           {channel.name}
-          {channel.urls.length > 1 && ` (源 ${(channel.currentSourceIndex ?? 0) + 1}/${channel.urls.length})`}
+          {channel.urls.length > 1 && ` (${t(language, 'sourceDisplay', {
+            current: (channel.currentSourceIndex ?? 0) + 1,
+            total: channel.urls.length
+          })})`}
         </span>
         <div className="flex-grow" />
         {isRandomMode && (
           <button
             onClick={() => onRandomChannel?.(channel.id)}
             className="text-white hover:text-gray-300 transition-colors px-2"
-            title="随机切换频道"
+            title={t(language, 'randomSwitch')}
           >
             <Shuffle className="w-5 h-5" />
           </button>
@@ -170,7 +175,7 @@ export function VideoPlayer({
           <button
             onClick={() => onSourceChange?.(channel.id, ((channel.currentSourceIndex ?? 0) + 1) % channel.urls.length)}
             className="text-white hover:text-gray-300 transition-colors px-2"
-            title="切换源"
+            title={t(language, 'switchSource')}
           >
             <RefreshCw className="w-5 h-5" />
           </button>

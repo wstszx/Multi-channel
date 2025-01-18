@@ -1,3 +1,5 @@
+import { Language } from './locales';
+
 export interface Channel {
   id: string;
   name: string;
@@ -16,6 +18,7 @@ export interface PlayerProps {
   onSourceChange?: (id: string, sourceIndex: number) => void;
   onRandomChannel?: (id: string) => void;
   isRandomMode: boolean;
+  language: Language;
 }
 
 export interface M3UChannel {
