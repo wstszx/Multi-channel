@@ -8,6 +8,7 @@ import { Language, t } from './locales';
 const DEFAULT_M3U_URL = 'https://iptv-org.github.io/iptv/index.m3u';
 const CHANNELS_PER_PAGE = 9;
 const LANGUAGE_STORAGE_KEY = 'preferred_language';
+const M3U_URL_STORAGE_KEY = 'last_m3u_url';
 
 function App() {
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -15,8 +16,11 @@ function App() {
   const [fullscreenId, setFullscreenId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showUrlInput, setShowUrlInput] = useState(false);
-  const [m3uUrl, setM3uUrl] = useState(DEFAULT_M3U_URL);
-  const [tempUrl, setTempUrl] = useState(DEFAULT_M3U_URL);
+  const [m3uUrl, setM3uUrl] = useState(() => {
+    const savedUrl = localStorage.getItem(M3U_URL_STORAGE_KEY);
+    return savedUrl || DEFAULT_M3U_URL;
+  });
+  const [tempUrl, setTempUrl] = useState(m3uUrl);
   const [pageInput, setPageInput] = useState('1');
   const [isRandomMode, setIsRandomMode] = useState(false);
   const [randomChannels, setRandomChannels] = useState<Channel[]>([]);
@@ -29,6 +33,11 @@ function App() {
   useEffect(() => {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
   }, [language]);
+
+  // Save M3U URL when it changes
+  useEffect(() => {
+    localStorage.setItem(M3U_URL_STORAGE_KEY, m3uUrl);
+  }, [m3uUrl]);
 
   const loadChannels = useCallback(async (url: string) => {
     setLoading(true);
@@ -48,6 +57,10 @@ function App() {
     } catch (error) {
       console.error('Error loading channels:', error);
       alert(t(language, 'loadError'));
+      // If loading fails with saved URL, try loading with default URL
+      if (url !== DEFAULT_M3U_URL) {
+        setM3uUrl(DEFAULT_M3U_URL);
+      }
     } finally {
       setLoading(false);
     }
