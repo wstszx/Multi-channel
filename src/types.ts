@@ -14,6 +14,8 @@ export interface PlayerProps {
   onVolumeChange: (id: string, volume: number) => void;
   onFullscreenClick: (id: string) => void;
   onSourceChange?: (id: string, sourceIndex: number) => void;
+  onRandomChannel?: (id: string) => void;
+  isRandomMode: boolean;
 }
 
 export interface M3UChannel {

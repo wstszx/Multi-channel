@@ -73,6 +73,27 @@ function App() {
     );
   }, []);
 
+  const handleRandomChannel = useCallback((id: string) => {
+    const availableChannels = channels.filter(c => c.id !== id);
+    if (availableChannels.length > 0) {
+      const randomChannel = availableChannels[Math.floor(Math.random() * availableChannels.length)];
+      
+      setChannels(prev =>
+        prev.map(channel =>
+          channel.id === id ? { ...randomChannel, id, volume: channel.volume } : channel
+        )
+      );
+
+      if (isRandomMode) {
+        setRandomChannels(prev =>
+          prev.map(channel =>
+            channel.id === id ? { ...randomChannel, id, volume: channel.volume } : channel
+          )
+        );
+      }
+    }
+  }, [channels, isRandomMode]);
+
   const toggleRandomMode = useCallback(() => {
     if (!isRandomMode) {
       const shuffled = [...channels].sort(() => Math.random() - 0.5);
@@ -233,6 +254,8 @@ function App() {
                 onVolumeChange={handleVolumeChange}
                 onFullscreenClick={handleFullscreenClick}
                 onSourceChange={handleSourceChange}
+                onRandomChannel={handleRandomChannel}
+                isRandomMode={isRandomMode}
               />
             ))}
           </div>

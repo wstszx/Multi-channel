@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Hls from 'hls.js';
-import { Volume2, VolumeX, Maximize2, RefreshCw } from 'lucide-react';
+import { Volume2, VolumeX, Maximize2, RefreshCw, Shuffle } from 'lucide-react';
 import type { PlayerProps } from '../types';
 import { useStore } from '../store/useStore';
 
@@ -9,7 +9,9 @@ export function VideoPlayer({
   isFullscreen, 
   onVolumeChange, 
   onFullscreenClick,
-  onSourceChange
+  onSourceChange,
+  onRandomChannel,
+  isRandomMode
 }: PlayerProps) {
   const playerRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -18,6 +20,10 @@ export function VideoPlayer({
   const [hls, setHls] = useState<Hls | null>(null);
   const currentChannel = useStore(state => state.currentChannel);
   const setCurrentChannel = useStore(state => state.setCurrentChannel);
+
+  useEffect(() => {
+    setError(null);
+  }, [channel.name]);
 
   useEffect(() => {
     if (!currentChannel && channel.id === '1') {
@@ -140,6 +146,15 @@ export function VideoPlayer({
           {channel.urls.length > 1 && ` (源 ${(channel.currentSourceIndex ?? 0) + 1}/${channel.urls.length})`}
         </span>
         <div className="flex-grow" />
+        {isRandomMode && (
+          <button
+            onClick={() => onRandomChannel?.(channel.id)}
+            className="text-white hover:text-gray-300 transition-colors px-2"
+            title="随机切换频道"
+          >
+            <Shuffle className="w-5 h-5" />
+          </button>
+        )}
         {channel.urls.length > 1 && (
           <button
             onClick={() => onSourceChange?.(channel.id, ((channel.currentSourceIndex ?? 0) + 1) % channel.urls.length)}
