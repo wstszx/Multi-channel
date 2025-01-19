@@ -24,6 +24,8 @@ export function VideoPlayer({
   const [hls, setHls] = useState<Hls | null>(null);
   const [showChannelList, setShowChannelList] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showControls, setShowControls] = useState(true);
+  const hideControlsTimeoutRef = useRef<number | null>(null);
   const currentChannel = useStore(state => state.currentChannel);
   const setCurrentChannel = useStore(state => state.setCurrentChannel);
 
@@ -152,14 +154,43 @@ export function VideoPlayer({
     }
   };
 
+  // 重置隐藏控制界面的计时器
+  const resetHideControlsTimer = () => {
+    if (hideControlsTimeoutRef.current) {
+      window.clearTimeout(hideControlsTimeoutRef.current);
+    }
+    setShowControls(true);
+    hideControlsTimeoutRef.current = window.setTimeout(() => {
+      setShowControls(false);
+    }, 3000); // 3秒后隐藏
+  };
+
+  // 组件挂载时启动计时器
+  useEffect(() => {
+    resetHideControlsTimer();
+    return () => {
+      if (hideControlsTimeoutRef.current) {
+        window.clearTimeout(hideControlsTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleMouseMove = () => {
+    resetHideControlsTimer();
+  };
+
   return (
     <div
       ref={containerRef}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseMove}
       className={`relative bg-black rounded-lg overflow-hidden ${
         isFullscreen ? 'fixed inset-0 z-50' : 'w-full h-full'
       }`}
     >
-      <div className="absolute top-0 left-0 right-0 p-2 bg-gradient-to-b from-black/70 to-transparent z-10 flex items-center gap-2">
+      <div className={`absolute top-0 left-0 right-0 p-2 bg-gradient-to-b from-black/70 to-transparent z-10 flex items-center gap-2 transition-opacity duration-300 ${
+        showControls ? 'opacity-100' : 'opacity-0'
+      }`}>
         {channel.logo && (
           <img src={channel.logo} alt={channel.name} className="w-6 h-6 object-contain" />
         )}
@@ -224,7 +255,9 @@ export function VideoPlayer({
         </div>
       )}
 
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent">
+      <div className={`absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent transition-opacity duration-300 ${
+        showControls ? 'opacity-100' : 'opacity-0'
+      }`}>
         <div className="flex items-center gap-4">
           <button
             onClick={toggleMute}
