@@ -98,7 +98,13 @@ function App() {
       channel.id === channelId ? { ...channel, volume } : channel
     );
     store.setChannels(updatedChannels);
-  }, [store]);
+    
+    if (isRandomMode) {
+      setRandomChannels(prev => prev.map(channel =>
+        channel.id === channelId ? { ...channel, volume } : channel
+      ));
+    }
+  }, [store, isRandomMode]);
 
   const handleFullscreenClick = useCallback((id: string) => {
     setFullscreenId(prev => (prev === id ? null : id));
@@ -109,7 +115,13 @@ function App() {
       channel.id === channelId ? { ...channel, currentSourceIndex: sourceIndex } : channel
     );
     store.setChannels(updatedChannels);
-  }, [store]);
+    
+    if (isRandomMode) {
+      setRandomChannels(prev => prev.map(channel =>
+        channel.id === channelId ? { ...channel, currentSourceIndex: sourceIndex } : channel
+      ));
+    }
+  }, [store, isRandomMode]);
 
   const handleRandomChannel = useCallback((channelId: string) => {
     const availableChannels = store.hideInvalidChannels && store.validChannelIds.length > 0
@@ -121,9 +133,18 @@ function App() {
     const nextChannel = availableChannels[nextIndex];
     
     if (nextChannel) {
-      handleChannelSwitch(channelId, nextChannel);
+      const updatedChannels = store.channels.map(channel =>
+        channel.id === channelId ? { ...nextChannel, id: channelId, volume: channel.volume } : channel
+      );
+      store.setChannels(updatedChannels);
+      
+      if (isRandomMode) {
+        setRandomChannels(prev => prev.map(channel =>
+          channel.id === channelId ? { ...nextChannel, id: channelId, volume: channel.volume } : channel
+        ));
+      }
     }
-  }, [store]);
+  }, [store, isRandomMode]);
 
   const handleChannelsPerPageChange = useCallback((value: number) => {
     if (value >= MIN_CHANNELS_PER_PAGE && value <= MAX_CHANNELS_PER_PAGE) {
