@@ -25,7 +25,11 @@ export const translations = {
     networkError: '网络错误，正在尝试切换源...',
     loadError: '加载频道列表失败，请检查链接是否正确',
     language: 'English',
-    channelsPerPage: '个播放器'
+    channelsPerPage: '个播放器',
+    allChannels: '所有频道',
+    showAllChannels: '查看所有频道',
+    searchPlaceholder: '搜索频道...',
+    pageInfo: '第 {page} 页'
   },
   en: {
     loading: 'Loading channels...',
@@ -51,7 +55,11 @@ export const translations = {
     networkError: 'Network error, trying to switch source...',
     loadError: 'Failed to load channel list, please check the URL',
     language: '中文',
-    channelsPerPage: ' Players'
+    channelsPerPage: ' Players',
+    allChannels: 'All Channels',
+    showAllChannels: 'Show All Channels',
+    searchPlaceholder: 'Search channels...',
+    pageInfo: 'Page {page}'
   }
 } as const;
 
