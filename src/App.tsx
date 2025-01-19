@@ -1,14 +1,17 @@
 import { useState, useCallback, useEffect } from 'react';
 import { VideoPlayer } from './components/VideoPlayer';
-import { Shuffle, Globe2 } from 'lucide-react';
+import { Shuffle, Globe2, Grid } from 'lucide-react';
 import type { Channel } from './types';
 import { parseM3U } from './utils/m3uParser';
 import { Language, t } from './locales';
 
 const DEFAULT_M3U_URL = 'https://iptv-org.github.io/iptv/index.m3u';
-const CHANNELS_PER_PAGE = 9;
+const DEFAULT_CHANNELS_PER_PAGE = 9;
+const MIN_CHANNELS_PER_PAGE = 1;
+const MAX_CHANNELS_PER_PAGE = 9;
 const LANGUAGE_STORAGE_KEY = 'preferred_language';
 const M3U_URL_STORAGE_KEY = 'last_m3u_url';
+const CHANNELS_PER_PAGE_KEY = 'channels_per_page';
 
 function App() {
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -24,6 +27,13 @@ function App() {
   const [pageInput, setPageInput] = useState('1');
   const [isRandomMode, setIsRandomMode] = useState(false);
   const [randomChannels, setRandomChannels] = useState<Channel[]>([]);
+  const [channelsPerPage, setChannelsPerPage] = useState(() => {
+    const saved = localStorage.getItem(CHANNELS_PER_PAGE_KEY);
+    const parsed = saved ? parseInt(saved) : DEFAULT_CHANNELS_PER_PAGE;
+    return parsed >= MIN_CHANNELS_PER_PAGE && parsed <= MAX_CHANNELS_PER_PAGE 
+      ? parsed 
+      : DEFAULT_CHANNELS_PER_PAGE;
+  });
   const [language, setLanguage] = useState<Language>(() => {
     const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
     return (savedLanguage === 'en' || savedLanguage === 'zh') ? savedLanguage : 'zh';
@@ -38,6 +48,11 @@ function App() {
   useEffect(() => {
     localStorage.setItem(M3U_URL_STORAGE_KEY, m3uUrl);
   }, [m3uUrl]);
+
+  // Save channels per page when it changes
+  useEffect(() => {
+    localStorage.setItem(CHANNELS_PER_PAGE_KEY, channelsPerPage.toString());
+  }, [channelsPerPage]);
 
   const loadChannels = useCallback(async (url: string) => {
     setLoading(true);
@@ -118,46 +133,61 @@ function App() {
     }
   }, [channels, isRandomMode]);
 
+  const handleChannelsPerPageChange = useCallback((value: number) => {
+    if (value >= MIN_CHANNELS_PER_PAGE && value <= MAX_CHANNELS_PER_PAGE) {
+      setChannelsPerPage(value);
+      setCurrentPage(0); // Reset to first page when changing the number of channels per page
+      if (isRandomMode) {
+        const shuffled = [...channels].sort(() => Math.random() - 0.5);
+        const selectedChannels = shuffled.slice(0, value).map(channel => {
+          const originalChannel = channels.find(c => c.id === channel.id);
+          return originalChannel || channel;
+        });
+        setRandomChannels(selectedChannels);
+      }
+    }
+  }, [channels, isRandomMode]);
+
   const toggleRandomMode = useCallback(() => {
     if (!isRandomMode) {
       const shuffled = [...channels].sort(() => Math.random() - 0.5);
-      const selectedChannels = shuffled.slice(0, CHANNELS_PER_PAGE).map(channel => {
+      const selectedChannels = shuffled.slice(0, channelsPerPage).map(channel => {
         const originalChannel = channels.find(c => c.id === channel.id);
         return originalChannel || channel;
       });
       setRandomChannels(selectedChannels);
     }
     setIsRandomMode(!isRandomMode);
-  }, [channels, isRandomMode]);
+  }, [channels, isRandomMode, channelsPerPage]);
 
   const handleNextPage = useCallback(() => {
     if (isRandomMode) {
       const shuffled = [...channels].sort(() => Math.random() - 0.5);
-      const selectedChannels = shuffled.slice(0, CHANNELS_PER_PAGE).map(channel => {
+      const selectedChannels = shuffled.slice(0, channelsPerPage).map(channel => {
         const originalChannel = channels.find(c => c.id === channel.id);
         return originalChannel || channel;
       });
       setRandomChannels(selectedChannels);
     } else {
-      setCurrentPage(prev => (prev + 1) % Math.ceil(channels.length / CHANNELS_PER_PAGE));
+      setCurrentPage(prev => (prev + 1) % Math.ceil(channels.length / channelsPerPage));
     }
-  }, [channels.length, isRandomMode, channels]);
+  }, [channels.length, isRandomMode, channels, channelsPerPage]);
 
   const handlePrevPage = useCallback(() => {
     if (isRandomMode) {
       const shuffled = [...channels].sort(() => Math.random() - 0.5);
-      const selectedChannels = shuffled.slice(0, CHANNELS_PER_PAGE).map(channel => {
+      const selectedChannels = shuffled.slice(0, channelsPerPage).map(channel => {
         const originalChannel = channels.find(c => c.id === channel.id);
         return originalChannel || channel;
       });
       setRandomChannels(selectedChannels);
     } else {
       setCurrentPage(prev => {
-        const totalPages = Math.ceil(channels.length / CHANNELS_PER_PAGE);
+        const totalPages = Math.ceil(channels.length / channelsPerPage);
         return (prev - 1 + totalPages) % totalPages;
       });
     }
-  }, [channels.length, isRandomMode, channels]);
+  }, [channels.length, isRandomMode, channels, channelsPerPage]);
 
   const handlePageInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setPageInput(e.target.value);
@@ -166,11 +196,11 @@ function App() {
   const handlePageSubmit = useCallback(() => {
     const value = parseInt(pageInput);
     if (!isNaN(value) && value > 0) {
-      const totalPages = Math.ceil(channels.length / CHANNELS_PER_PAGE);
+      const totalPages = Math.ceil(channels.length / channelsPerPage);
       const newPage = Math.min(value - 1, totalPages - 1);
       setCurrentPage(newPage);
     }
-  }, [pageInput, channels.length]);
+  }, [pageInput, channels.length, channelsPerPage]);
 
   useEffect(() => {
     setPageInput((currentPage + 1).toString());
@@ -190,12 +220,12 @@ function App() {
     );
   }
 
-  const totalPages = Math.ceil(channels.length / CHANNELS_PER_PAGE);
+  const totalPages = Math.ceil(channels.length / channelsPerPage);
   const displayedChannels = isRandomMode
     ? randomChannels
     : channels.slice(
-        currentPage * CHANNELS_PER_PAGE,
-        (currentPage + 1) * CHANNELS_PER_PAGE
+        currentPage * channelsPerPage,
+        (currentPage + 1) * channelsPerPage
       );
 
   return (
@@ -240,6 +270,20 @@ function App() {
                 </button>
               </div>
             )}
+            <div className="flex items-center gap-2 text-white ml-2">
+              <Grid className="w-5 h-5" />
+              <select
+                value={channelsPerPage}
+                onChange={(e) => handleChannelsPerPageChange(parseInt(e.target.value))}
+                className="bg-gray-800 rounded border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-2 py-1"
+              >
+                {Array.from({ length: MAX_CHANNELS_PER_PAGE }, (_, i) => i + 1).map(num => (
+                  <option key={num} value={num}>
+                    {num} {t(language, 'channelsPerPage')}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
               onClick={toggleRandomMode}
               className={`px-4 py-2 rounded transition-colors ${
@@ -253,7 +297,7 @@ function App() {
             </button>
             <div className="text-white ml-4">
               {t(language, 'totalChannels', { count: channels.length })}
-              {isRandomMode && t(language, 'randomDisplay')}
+              {isRandomMode && t(language, 'randomDisplay', { count: channelsPerPage })}
             </div>
           </div>
           <div className="flex gap-2">
@@ -278,7 +322,15 @@ function App() {
       </div>
       <div className="flex-1 overflow-hidden">
         <div className="h-full max-w-[1920px] w-full mx-auto px-4 md:px-6">
-          <div className="grid h-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
+          <div className={`grid h-full gap-4 auto-rows-fr grid-cols-1 ${
+            channelsPerPage === 1 ? '' :
+            channelsPerPage === 2 ? 'md:grid-cols-2' :
+            channelsPerPage === 3 ? 'md:grid-cols-3' :
+            channelsPerPage === 4 ? 'md:grid-cols-2 lg:grid-cols-2' :
+            channelsPerPage <= 6 ? 'md:grid-cols-2 lg:grid-cols-3' :
+            channelsPerPage <= 8 ? 'md:grid-cols-2 lg:grid-cols-4' :
+            'md:grid-cols-3 lg:grid-cols-3'
+          }`}>
             {displayedChannels.map(channel => (
               <VideoPlayer
                 key={channel.id}

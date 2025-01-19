@@ -11,7 +11,7 @@ export const translations = {
     randomMode: '随机播放模式',
     normalMode: '返回普通模式',
     totalChannels: '共 {count} 个频道',
-    randomDisplay: '(随机显示9个)',
+    randomDisplay: '(随机显示{count}个)',
     setM3uUrl: '设置M3U链接',
     m3uUrlLabel: 'M3U 链接地址',
     m3uUrlPlaceholder: '请输入 M3U 链接地址',
@@ -24,7 +24,8 @@ export const translations = {
     randomSwitch: '随机切换频道',
     networkError: '网络错误，正在尝试切换源...',
     loadError: '加载频道列表失败，请检查链接是否正确',
-    language: 'English'
+    language: 'English',
+    channelsPerPage: '个播放器'
   },
   en: {
     loading: 'Loading channels...',
@@ -36,7 +37,7 @@ export const translations = {
     randomMode: 'Random Mode',
     normalMode: 'Normal Mode',
     totalChannels: 'Total {count} channels',
-    randomDisplay: '(Random 9)',
+    randomDisplay: '(Random {count})',
     setM3uUrl: 'Set M3U URL',
     m3uUrlLabel: 'M3U URL',
     m3uUrlPlaceholder: 'Please enter M3U URL',
@@ -49,7 +50,8 @@ export const translations = {
     randomSwitch: 'Random Switch',
     networkError: 'Network error, trying to switch source...',
     loadError: 'Failed to load channel list, please check the URL',
-    language: '中文'
+    language: '中文',
+    channelsPerPage: ' Players'
   }
 } as const;
 
