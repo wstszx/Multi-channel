@@ -3,7 +3,7 @@ import { Search, CheckCircle } from 'lucide-react';
 import type { ChannelListProps } from '../types';
 import { t } from '../locales';
 
-const CHANNELS_PER_LIST_PAGE = 30;
+const CHANNELS_PER_LIST_PAGE = 15;
 
 export function ChannelList({ 
   channels, 
@@ -32,25 +32,9 @@ export function ChannelList({
     setCurrentPage(1);
   }, [searchQuery]);
 
-  // Preload adjacent pages data
-  useEffect(() => {
-    // Preload previous page
-    if (currentPage > 1) {
-      const prevStartIndex = (currentPage - 2) * CHANNELS_PER_LIST_PAGE;
-      const prevEndIndex = prevStartIndex + CHANNELS_PER_LIST_PAGE;
-      filteredChannels.slice(prevStartIndex, prevEndIndex);
-    }
-    // Preload next page
-    if (currentPage < totalPages) {
-      const nextStartIndex = currentPage * CHANNELS_PER_LIST_PAGE;
-      const nextEndIndex = nextStartIndex + CHANNELS_PER_LIST_PAGE;
-      filteredChannels.slice(nextStartIndex, nextEndIndex);
-    }
-  }, [currentPage, filteredChannels, totalPages]);
-
   return (
-    <div className="space-y-4">
-      <div className="relative">
+    <div className="flex flex-col h-[calc(90vh-180px)]">
+      <div className="relative mb-4">
         <input
           type="text"
           value={searchQuery}
@@ -60,29 +44,31 @@ export function ChannelList({
         />
         <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {currentPageChannels.map((channel) => (
-          <button
-            key={channel.id}
-            onClick={() => onChannelSelect(channel)}
-            className="flex items-center gap-3 p-3 rounded bg-gray-800 hover:bg-gray-700 transition-colors text-left group"
-          >
-            <div className="relative">
-              {channel.logo && (
-                <img src={channel.logo} alt="" className="w-8 h-8 object-contain" />
-              )}
-              {validChannelIds && validChannelIds.includes(channel.id) && (
-                <CheckCircle className="w-4 h-4 text-green-500 absolute -top-1 -right-1" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-white font-medium truncate">{channel.name}</div>
-              {channel.group && (
-                <div className="text-gray-400 text-sm truncate">{channel.group}</div>
-              )}
-            </div>
-          </button>
-        ))}
+      <div className="flex-1 min-h-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 h-full">
+          {currentPageChannels.map((channel) => (
+            <button
+              key={channel.id}
+              onClick={() => onChannelSelect(channel)}
+              className="flex items-center gap-3 p-3 rounded bg-gray-800 hover:bg-gray-700 transition-colors text-left group"
+            >
+              <div className="relative">
+                {channel.logo && (
+                  <img src={channel.logo} alt="" className="w-8 h-8 object-contain" />
+                )}
+                {validChannelIds && validChannelIds.includes(channel.id) && (
+                  <CheckCircle className="w-4 h-4 text-green-500 absolute -top-1 -right-1" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-white font-medium truncate">{channel.name}</div>
+                {channel.group && (
+                  <div className="text-gray-400 text-sm truncate">{channel.group}</div>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
       {totalPages > 1 && (
         <div className="mt-4 flex justify-center gap-2">

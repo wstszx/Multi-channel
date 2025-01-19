@@ -305,7 +305,7 @@ export function VideoPlayer({
             setShowChannelList(false);
           }
         }}>
-          <div className="bg-gray-900 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] flex flex-col">
+          <div className="bg-gray-900 rounded-lg p-6 w-full max-w-4xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl text-white font-semibold">{t(language, 'channelList')}</h2>
               <button
@@ -315,18 +315,16 @@ export function VideoPlayer({
                 ✕
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto">
-              <ChannelList
-                channels={allChannels}
-                validChannelIds={validChannelIds}
-                hideInvalidChannels={hideInvalidChannels}
-                onChannelSelect={(selectedChannel) => {
-                  onChannelSwitch(channel.id, selectedChannel);
-                  setShowChannelList(false);
-                }}
-                language={language}
-              />
-            </div>
+            <ChannelList
+              channels={allChannels}
+              validChannelIds={validChannelIds}
+              hideInvalidChannels={hideInvalidChannels}
+              onChannelSelect={(selectedChannel) => {
+                onChannelSwitch(channel.id, selectedChannel);
+                setShowChannelList(false);
+              }}
+              language={language}
+            />
           </div>
         </div>
       )}

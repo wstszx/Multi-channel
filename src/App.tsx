@@ -43,7 +43,7 @@ function App() {
   const [showChannelList, setShowChannelList] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [channelListPage, setChannelListPage] = useState(1);
-  const CHANNELS_PER_LIST_PAGE = 30;
+  const CHANNELS_PER_LIST_PAGE = 15;
 
   const store = useStore();
 
@@ -386,7 +386,7 @@ function App() {
       </div>
       <div className="flex-1 overflow-hidden">
         <div className="h-full max-w-[1920px] w-full mx-auto px-4 md:px-6">
-          <div className={`grid h-full gap-4 auto-rows-fr grid-cols-1 ${
+          <div className={`h-full flex flex-col ${
             channelsPerPage === 1 ? '' :
             channelsPerPage === 2 ? 'md:grid-cols-2' :
             channelsPerPage === 3 ? 'md:grid-cols-3' :
@@ -395,21 +395,33 @@ function App() {
             channelsPerPage <= 8 ? 'md:grid-cols-2 lg:grid-cols-4' :
             'md:grid-cols-3 lg:grid-cols-3'
           }`}>
-            {displayedChannels.map(channel => (
-              <VideoPlayer
-                key={channel.id}
-                channel={channel}
-                isFullscreen={channel.id === fullscreenId}
-                onVolumeChange={handleVolumeChange}
-                onFullscreenClick={handleFullscreenClick}
-                onSourceChange={handleSourceChange}
-                onRandomChannel={handleRandomChannel}
-                onChannelSwitch={handleChannelSwitch}
-                isRandomMode={isRandomMode}
-                language={language}
-                allChannels={store.channels}
-              />
-            ))}
+            <div className="flex-1 min-h-0">
+              <div className={`grid h-full gap-4 auto-rows-fr grid-cols-1 ${
+                channelsPerPage === 1 ? '' :
+                channelsPerPage === 2 ? 'md:grid-cols-2' :
+                channelsPerPage === 3 ? 'md:grid-cols-3' :
+                channelsPerPage === 4 ? 'md:grid-cols-2 lg:grid-cols-2' :
+                channelsPerPage <= 6 ? 'md:grid-cols-2 lg:grid-cols-3' :
+                channelsPerPage <= 8 ? 'md:grid-cols-2 lg:grid-cols-4' :
+                'md:grid-cols-3 lg:grid-cols-3'
+              }`}>
+                {displayedChannels.map(channel => (
+                  <VideoPlayer
+                    key={channel.id}
+                    channel={channel}
+                    isFullscreen={channel.id === fullscreenId}
+                    onVolumeChange={handleVolumeChange}
+                    onFullscreenClick={handleFullscreenClick}
+                    onSourceChange={handleSourceChange}
+                    onRandomChannel={handleRandomChannel}
+                    onChannelSwitch={handleChannelSwitch}
+                    isRandomMode={isRandomMode}
+                    language={language}
+                    allChannels={store.channels}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -477,29 +489,31 @@ function App() {
               />
               <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             </div>
-            <div className="flex-1 overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {currentPageChannels.map((channel, index) => {
-                  const page = Math.floor((startIndex + index) / channelsPerPage) + 1;
-                  return (
-                    <button
-                      key={channel.id}
-                      onClick={() => handleChannelClick(channel.id)}
-                      className="flex items-center gap-3 p-3 rounded bg-gray-800 hover:bg-gray-700 transition-colors text-left"
-                    >
-                      {channel.logo && (
-                        <img src={channel.logo} alt="" className="w-8 h-8 object-contain" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-white font-medium truncate">{channel.name}</div>
-                        <div className="text-gray-400 text-sm truncate">
-                          {t(language, 'pageInfo', { page })}
-                          {channel.group && ` · ${channel.group}`}
+            <div className="flex-1 flex flex-col h-[calc(90vh-180px)]">
+              <div className="flex-1 min-h-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 h-full">
+                  {currentPageChannels.map((channel, index) => {
+                    const page = Math.floor((startIndex + index) / channelsPerPage) + 1;
+                    return (
+                      <button
+                        key={channel.id}
+                        onClick={() => handleChannelClick(channel.id)}
+                        className="flex items-center gap-3 p-3 rounded bg-gray-800 hover:bg-gray-700 transition-colors text-left"
+                      >
+                        {channel.logo && (
+                          <img src={channel.logo} alt="" className="w-8 h-8 object-contain" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-white font-medium truncate">{channel.name}</div>
+                          <div className="text-gray-400 text-sm truncate">
+                            {t(language, 'pageInfo', { page })}
+                            {channel.group && ` · ${channel.group}`}
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  );
-                })}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               {totalListPages > 1 && (
                 <div className="mt-4 flex justify-center gap-2">
