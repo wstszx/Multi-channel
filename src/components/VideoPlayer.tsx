@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Hls from 'hls.js';
-import { Volume2, VolumeX, Maximize2, RefreshCw, Shuffle, List } from 'lucide-react';
+import { Volume2, VolumeX, Maximize2, RefreshCw, Shuffle, List, Loader2 } from 'lucide-react';
 import type { PlayerProps } from '../types';
 import { useStore } from '../store/useStore';
 import { t } from '../locales';
@@ -25,6 +25,7 @@ export function VideoPlayer({
   const [hls, setHls] = useState<Hls | null>(null);
   const [showChannelList, setShowChannelList] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const hideControlsTimeoutRef = useRef<number | null>(null);
   const currentChannel = useStore(state => state.currentChannel);
   const setCurrentChannel = useStore(state => state.setCurrentChannel);
@@ -33,6 +34,7 @@ export function VideoPlayer({
 
   useEffect(() => {
     setError(null);
+    setIsLoading(true);
   }, [channel.name]);
 
   useEffect(() => {
@@ -122,10 +124,28 @@ export function VideoPlayer({
       video.src = currentUrl;
     }
 
+    // Add event listeners for loading state
+    const handleLoadStart = () => setIsLoading(true);
+    const handleCanPlay = () => setIsLoading(false);
+    const handlePlaying = () => setIsLoading(false);
+    const handleWaiting = () => setIsLoading(true);
+    const handleError = () => setIsLoading(false);
+
+    video.addEventListener('loadstart', handleLoadStart);
+    video.addEventListener('canplay', handleCanPlay);
+    video.addEventListener('playing', handlePlaying);
+    video.addEventListener('waiting', handleWaiting);
+    video.addEventListener('error', handleError);
+
     return () => {
       if (hls) {
         hls.destroy();
       }
+      video.removeEventListener('loadstart', handleLoadStart);
+      video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('playing', handlePlaying);
+      video.removeEventListener('waiting', handleWaiting);
+      video.removeEventListener('error', handleError);
     };
   }, [channel.urls, channel.currentSourceIndex]);
 
@@ -240,6 +260,11 @@ export function VideoPlayer({
           playsInline
           muted={isMuted}
         />
+        {isLoading && !error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+            <Loader2 className="w-8 h-8 text-white animate-spin" />
+          </div>
+        )}
       </div>
 
       {error && (
