@@ -42,6 +42,8 @@ function App() {
   });
   const [showChannelList, setShowChannelList] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [channelListPage, setChannelListPage] = useState(1);
+  const CHANNELS_PER_LIST_PAGE = 30;
 
   const store = useStore();
 
@@ -206,6 +208,34 @@ function App() {
     channel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     channel.group?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const totalListPages = Math.ceil(filteredChannels.length / CHANNELS_PER_LIST_PAGE);
+  const startIndex = (channelListPage - 1) * CHANNELS_PER_LIST_PAGE;
+  const endIndex = startIndex + CHANNELS_PER_LIST_PAGE;
+  const currentPageChannels = filteredChannels.slice(startIndex, endIndex);
+
+  // Preload adjacent pages data
+  useEffect(() => {
+    if (showChannelList) {
+      // Preload previous page
+      if (channelListPage > 1) {
+        const prevStartIndex = (channelListPage - 2) * CHANNELS_PER_LIST_PAGE;
+        const prevEndIndex = prevStartIndex + CHANNELS_PER_LIST_PAGE;
+        filteredChannels.slice(prevStartIndex, prevEndIndex);
+      }
+      // Preload next page
+      if (channelListPage < totalListPages) {
+        const nextStartIndex = channelListPage * CHANNELS_PER_LIST_PAGE;
+        const nextEndIndex = nextStartIndex + CHANNELS_PER_LIST_PAGE;
+        filteredChannels.slice(nextStartIndex, nextEndIndex);
+      }
+    }
+  }, [channelListPage, showChannelList, filteredChannels, totalListPages]);
+
+  // Reset page when search query changes
+  useEffect(() => {
+    setChannelListPage(1);
+  }, [searchQuery]);
 
   const getPageForChannel = useCallback((channelId: string) => {
     const channelIndex = store.channels.findIndex(c => c.id === channelId);
@@ -424,9 +454,14 @@ function App() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
           <div className="bg-gray-900 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl text-white font-semibold">{t(language, 'allChannels')}</h2>
+              <h2 className="text-xl text-white font-semibold">
+                {t(language, 'allChannels')} ({filteredChannels.length})
+              </h2>
               <button
-                onClick={() => setShowChannelList(false)}
+                onClick={() => {
+                  setShowChannelList(false);
+                  setChannelListPage(1);
+                }}
                 className="text-gray-400 hover:text-white"
               >
                 ✕
@@ -444,8 +479,8 @@ function App() {
             </div>
             <div className="flex-1 overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredChannels.map((channel, index) => {
-                  const page = Math.floor(index / channelsPerPage) + 1;
+                {currentPageChannels.map((channel, index) => {
+                  const page = Math.floor((startIndex + index) / channelsPerPage) + 1;
                   return (
                     <button
                       key={channel.id}
@@ -466,6 +501,27 @@ function App() {
                   );
                 })}
               </div>
+              {totalListPages > 1 && (
+                <div className="mt-4 flex justify-center gap-2">
+                  <button
+                    onClick={() => setChannelListPage(prev => Math.max(1, prev - 1))}
+                    disabled={channelListPage === 1}
+                    className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {t(language, 'prevPage')}
+                  </button>
+                  <span className="px-4 py-2 text-white">
+                    {channelListPage} / {totalListPages}
+                  </span>
+                  <button
+                    onClick={() => setChannelListPage(prev => Math.min(totalListPages, prev + 1))}
+                    disabled={channelListPage === totalListPages}
+                    className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {t(language, 'nextPage')}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
