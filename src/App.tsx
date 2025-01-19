@@ -128,9 +128,12 @@ function App() {
       ? store.channels.filter(ch => store.validChannelIds.includes(ch.id))
       : store.channels;
     
-    const currentIndex = availableChannels.findIndex(ch => ch.id === channelId);
-    const nextIndex = (currentIndex + 1) % availableChannels.length;
-    const nextChannel = availableChannels[nextIndex];
+    // Get a random channel from available channels, excluding the current one
+    const otherChannels = availableChannels.filter(ch => ch.id !== channelId);
+    if (otherChannels.length === 0) return;
+    
+    const randomIndex = Math.floor(Math.random() * otherChannels.length);
+    const nextChannel = otherChannels[randomIndex];
     
     if (nextChannel) {
       const updatedChannels = store.channels.map(channel =>
