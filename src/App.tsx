@@ -231,6 +231,14 @@ function App() {
     setShowChannelList(false);
   }, [getPageForChannel]);
 
+  const handleChannelSwitch = useCallback((playerId: string, newChannel: Channel) => {
+    setChannels(prev =>
+      prev.map(channel =>
+        channel.id === playerId ? { ...newChannel, id: playerId, volume: channel.volume } : channel
+      )
+    );
+  }, []);
+
   if (loading) {
     return (
       <div className="h-screen bg-gray-950 flex items-center justify-center">
@@ -367,8 +375,10 @@ function App() {
                 onFullscreenClick={handleFullscreenClick}
                 onSourceChange={handleSourceChange}
                 onRandomChannel={handleRandomChannel}
+                onChannelSwitch={handleChannelSwitch}
                 isRandomMode={isRandomMode}
                 language={language}
+                allChannels={channels}
               />
             ))}
           </div>

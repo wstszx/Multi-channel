@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Hls from 'hls.js';
-import { Volume2, VolumeX, Maximize2, RefreshCw, Shuffle } from 'lucide-react';
+import { Volume2, VolumeX, Maximize2, RefreshCw, Shuffle, List, Search } from 'lucide-react';
 import type { PlayerProps } from '../types';
 import { useStore } from '../store/useStore';
 import { t } from '../locales';
@@ -12,16 +12,25 @@ export function VideoPlayer({
   onFullscreenClick,
   onSourceChange,
   onRandomChannel,
+  onChannelSwitch,
   isRandomMode,
-  language
+  language,
+  allChannels
 }: PlayerProps) {
   const playerRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hls, setHls] = useState<Hls | null>(null);
+  const [showChannelList, setShowChannelList] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const currentChannel = useStore(state => state.currentChannel);
   const setCurrentChannel = useStore(state => state.setCurrentChannel);
+
+  const filteredChannels = allChannels.filter(ch => 
+    ch.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    ch.group?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   useEffect(() => {
     setError(null);
@@ -162,6 +171,15 @@ export function VideoPlayer({
           })})`}
         </span>
         <div className="flex-grow" />
+        {!isRandomMode && (
+          <button
+            onClick={() => setShowChannelList(true)}
+            className="text-white hover:text-gray-300 transition-colors px-2"
+            title={t(language, 'channelList')}
+          >
+            <List className="w-5 h-5" />
+          </button>
+        )}
         {isRandomMode && (
           <button
             onClick={() => onRandomChannel?.(channel.id)}
@@ -227,6 +245,63 @@ export function VideoPlayer({
           )}
         </div>
       </div>
+
+      {showChannelList && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowChannelList(false);
+          }
+        }}>
+          <div className="bg-gray-900 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl text-white font-semibold">{t(language, 'channelList')}</h2>
+              <button
+                onClick={() => setShowChannelList(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="relative mb-4">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t(language, 'searchPlaceholder')}
+                className="w-full px-10 py-2 bg-gray-800 text-white rounded border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+              <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredChannels.map((ch) => (
+                  <button
+                    key={ch.id}
+                    onClick={() => {
+                      onChannelSwitch(channel.id, ch);
+                      setShowChannelList(false);
+                      setSearchQuery('');
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded ${
+                      ch.id === channel.id ? 'bg-blue-600 hover:bg-blue-500' : 'bg-gray-800 hover:bg-gray-700'
+                    } transition-colors text-left`}
+                  >
+                    {ch.logo && (
+                      <img src={ch.logo} alt="" className="w-8 h-8 object-contain" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white font-medium truncate">{ch.name}</div>
+                      {ch.group && (
+                        <div className="text-gray-400 text-sm truncate">{ch.group}</div>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
