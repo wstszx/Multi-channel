@@ -1,9 +1,12 @@
-import { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { VideoPlayer } from './components/VideoPlayer';
-import { Shuffle, Globe2, Grid, List, Search } from 'lucide-react';
-import type { Channel } from './types';
+import { ChannelValidator } from './components/ChannelValidator';
+import { Shuffle, Grid, List, Search } from 'lucide-react';
+import type { Channel, Language, M3UChannel } from './types';
+import { t } from './locales';
+import { useStore } from './store/useStore';
 import { parseM3U } from './utils/m3uParser';
-import { Language, t } from './locales';
+import { Settings } from './components/Settings';
 
 const DEFAULT_M3U_URL = 'https://iptv-org.github.io/iptv/index.m3u';
 const DEFAULT_CHANNELS_PER_PAGE = 9;
@@ -14,7 +17,6 @@ const M3U_URL_STORAGE_KEY = 'last_m3u_url';
 const CHANNELS_PER_PAGE_KEY = 'channels_per_page';
 
 function App() {
-  const [channels, setChannels] = useState<Channel[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [fullscreenId, setFullscreenId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,6 +43,8 @@ function App() {
   const [showChannelList, setShowChannelList] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const store = useStore();
+
   // Save language preference when it changes
   useEffect(() => {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
@@ -60,7 +64,7 @@ function App() {
     setLoading(true);
     try {
       const m3uChannels = await parseM3U(url);
-      const formattedChannels: Channel[] = m3uChannels.map((channel, index) => ({
+      const formattedChannels: Channel[] = m3uChannels.map((channel: M3UChannel, index: number) => ({
         id: String(index + 1),
         name: channel.name,
         urls: [channel.url],
@@ -69,7 +73,7 @@ function App() {
         group: channel.group,
         currentSourceIndex: 0
       }));
-      setChannels(formattedChannels);
+      store.setChannels(formattedChannels);
       setCurrentPage(0);
     } catch (error) {
       console.error('Error loading channels:', error);
@@ -87,109 +91,93 @@ function App() {
     loadChannels(m3uUrl);
   }, [loadChannels, m3uUrl]);
 
-  const handleVolumeChange = useCallback((id: string, volume: number) => {
-    setChannels(prev =>
-      prev.map(channel =>
-        channel.id === id ? { ...channel, volume } : channel
-      )
+  const handleVolumeChange = useCallback((channelId: string, volume: number) => {
+    const updatedChannels = store.channels.map(channel => 
+      channel.id === channelId ? { ...channel, volume } : channel
     );
-    if (isRandomMode) {
-      setRandomChannels(prev =>
-        prev.map(channel =>
-          channel.id === id ? { ...channel, volume } : channel
-        )
-      );
-    }
-  }, [isRandomMode]);
+    store.setChannels(updatedChannels);
+  }, [store]);
 
   const handleFullscreenClick = useCallback((id: string) => {
     setFullscreenId(prev => (prev === id ? null : id));
   }, []);
 
-  const handleSourceChange = useCallback((id: string, sourceIndex: number) => {
-    setChannels(prev =>
-      prev.map(channel =>
-        channel.id === id ? { ...channel, currentSourceIndex: sourceIndex } : channel
-      )
+  const handleSourceChange = useCallback((channelId: string, sourceIndex: number) => {
+    const updatedChannels = store.channels.map(channel => 
+      channel.id === channelId ? { ...channel, currentSourceIndex: sourceIndex } : channel
     );
-  }, []);
+    store.setChannels(updatedChannels);
+  }, [store]);
 
-  const handleRandomChannel = useCallback((id: string) => {
-    const availableChannels = channels.filter(c => c.id !== id);
-    if (availableChannels.length > 0) {
-      const randomChannel = availableChannels[Math.floor(Math.random() * availableChannels.length)];
-      
-      setChannels(prev =>
-        prev.map(channel =>
-          channel.id === id ? { ...randomChannel, id, volume: channel.volume } : channel
-        )
-      );
-
-      if (isRandomMode) {
-        setRandomChannels(prev =>
-          prev.map(channel =>
-            channel.id === id ? { ...randomChannel, id, volume: channel.volume } : channel
-          )
-        );
-      }
+  const handleRandomChannel = useCallback((channelId: string) => {
+    const availableChannels = store.hideInvalidChannels && store.validChannelIds.length > 0
+      ? store.channels.filter(ch => store.validChannelIds.includes(ch.id))
+      : store.channels;
+    
+    const currentIndex = availableChannels.findIndex(ch => ch.id === channelId);
+    const nextIndex = (currentIndex + 1) % availableChannels.length;
+    const nextChannel = availableChannels[nextIndex];
+    
+    if (nextChannel) {
+      handleChannelSwitch(channelId, nextChannel);
     }
-  }, [channels, isRandomMode]);
+  }, [store]);
 
   const handleChannelsPerPageChange = useCallback((value: number) => {
     if (value >= MIN_CHANNELS_PER_PAGE && value <= MAX_CHANNELS_PER_PAGE) {
       setChannelsPerPage(value);
       setCurrentPage(0); // Reset to first page when changing the number of channels per page
       if (isRandomMode) {
-        const shuffled = [...channels].sort(() => Math.random() - 0.5);
+        const shuffled = [...store.channels].sort(() => Math.random() - 0.5);
         const selectedChannels = shuffled.slice(0, value).map(channel => {
-          const originalChannel = channels.find(c => c.id === channel.id);
+          const originalChannel = store.channels.find(c => c.id === channel.id);
           return originalChannel || channel;
         });
         setRandomChannels(selectedChannels);
       }
     }
-  }, [channels, isRandomMode]);
+  }, [store.channels, isRandomMode]);
 
   const toggleRandomMode = useCallback(() => {
     if (!isRandomMode) {
-      const shuffled = [...channels].sort(() => Math.random() - 0.5);
+      const shuffled = [...store.channels].sort(() => Math.random() - 0.5);
       const selectedChannels = shuffled.slice(0, channelsPerPage).map(channel => {
-        const originalChannel = channels.find(c => c.id === channel.id);
+        const originalChannel = store.channels.find(c => c.id === channel.id);
         return originalChannel || channel;
       });
       setRandomChannels(selectedChannels);
     }
     setIsRandomMode(!isRandomMode);
-  }, [channels, isRandomMode, channelsPerPage]);
+  }, [store.channels, isRandomMode, channelsPerPage]);
 
   const handleNextPage = useCallback(() => {
     if (isRandomMode) {
-      const shuffled = [...channels].sort(() => Math.random() - 0.5);
+      const shuffled = [...store.channels].sort(() => Math.random() - 0.5);
       const selectedChannels = shuffled.slice(0, channelsPerPage).map(channel => {
-        const originalChannel = channels.find(c => c.id === channel.id);
+        const originalChannel = store.channels.find(c => c.id === channel.id);
         return originalChannel || channel;
       });
       setRandomChannels(selectedChannels);
     } else {
-      setCurrentPage(prev => (prev + 1) % Math.ceil(channels.length / channelsPerPage));
+      setCurrentPage(prev => (prev + 1) % Math.ceil(store.channels.length / channelsPerPage));
     }
-  }, [channels.length, isRandomMode, channels, channelsPerPage]);
+  }, [store.channels.length, isRandomMode, store.channels, channelsPerPage]);
 
   const handlePrevPage = useCallback(() => {
     if (isRandomMode) {
-      const shuffled = [...channels].sort(() => Math.random() - 0.5);
+      const shuffled = [...store.channels].sort(() => Math.random() - 0.5);
       const selectedChannels = shuffled.slice(0, channelsPerPage).map(channel => {
-        const originalChannel = channels.find(c => c.id === channel.id);
+        const originalChannel = store.channels.find(c => c.id === channel.id);
         return originalChannel || channel;
       });
       setRandomChannels(selectedChannels);
     } else {
       setCurrentPage(prev => {
-        const totalPages = Math.ceil(channels.length / channelsPerPage);
+        const totalPages = Math.ceil(store.channels.length / channelsPerPage);
         return (prev - 1 + totalPages) % totalPages;
       });
     }
-  }, [channels.length, isRandomMode, channels, channelsPerPage]);
+  }, [store.channels.length, isRandomMode, store.channels, channelsPerPage]);
 
   const handlePageInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setPageInput(e.target.value);
@@ -198,11 +186,11 @@ function App() {
   const handlePageSubmit = useCallback(() => {
     const value = parseInt(pageInput);
     if (!isNaN(value) && value > 0) {
-      const totalPages = Math.ceil(channels.length / channelsPerPage);
+      const totalPages = Math.ceil(store.channels.length / channelsPerPage);
       const newPage = Math.min(value - 1, totalPages - 1);
       setCurrentPage(newPage);
     }
-  }, [pageInput, channels.length, channelsPerPage]);
+  }, [pageInput, store.channels.length, channelsPerPage]);
 
   useEffect(() => {
     setPageInput((currentPage + 1).toString());
@@ -214,16 +202,16 @@ function App() {
     setShowUrlInput(false);
   }, [tempUrl]);
 
-  const filteredChannels = channels.filter(channel => 
+  const filteredChannels = store.channels.filter(channel => 
     channel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     channel.group?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getPageForChannel = useCallback((channelId: string) => {
-    const channelIndex = channels.findIndex(c => c.id === channelId);
+    const channelIndex = store.channels.findIndex(c => c.id === channelId);
     if (channelIndex === -1) return 0;
     return Math.floor(channelIndex / channelsPerPage);
-  }, [channels, channelsPerPage]);
+  }, [store.channels, channelsPerPage]);
 
   const handleChannelClick = useCallback((channelId: string) => {
     const targetPage = getPageForChannel(channelId);
@@ -231,13 +219,16 @@ function App() {
     setShowChannelList(false);
   }, [getPageForChannel]);
 
-  const handleChannelSwitch = useCallback((playerId: string, newChannel: Channel) => {
-    setChannels(prev =>
-      prev.map(channel =>
-        channel.id === playerId ? { ...newChannel, id: playerId, volume: channel.volume } : channel
-      )
+  const handleChannelSwitch = useCallback((fromChannelId: string, toChannel: Channel) => {
+    const updatedChannels = store.channels.map(channel =>
+      channel.id === fromChannelId ? { ...toChannel, id: fromChannelId, volume: channel.volume } : channel
     );
-  }, []);
+    store.setChannels(updatedChannels);
+  }, [store]);
+
+  const handleValidationComplete = useCallback((validIds: string[]) => {
+    store.setValidChannelIds(validIds);
+  }, [store]);
 
   if (loading) {
     return (
@@ -247,10 +238,10 @@ function App() {
     );
   }
 
-  const totalPages = Math.ceil(channels.length / channelsPerPage);
+  const totalPages = Math.ceil(store.channels.length / channelsPerPage);
   const displayedChannels = isRandomMode
     ? randomChannels
-    : channels.slice(
+    : store.channels.slice(
         currentPage * channelsPerPage,
         (currentPage + 1) * channelsPerPage
       );
@@ -258,100 +249,108 @@ function App() {
   return (
     <div className="h-screen bg-gray-950 flex flex-col overflow-hidden">
       <div className="max-w-[1920px] w-full mx-auto px-4 md:px-6 py-4">
-        <div className="flex justify-between items-center">
-          <div className="flex gap-2 items-center">
-            <button
-              onClick={handlePrevPage}
-              className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700"
-            >
-              {t(language, 'prevPage')}
-            </button>
-            <button
-              onClick={handleNextPage}
-              className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700"
-            >
-              {t(language, 'nextPage')}
-            </button>
-            {!isRandomMode && (
-              <div className="flex items-center gap-2 text-white">
-                <span>{t(language, 'jumpTo')}</span>
-                <input
-                  type="number"
-                  min="1"
-                  max={totalPages}
-                  value={pageInput}
-                  onChange={handlePageInputChange}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handlePageSubmit();
-                    }
-                  }}
-                  className="w-16 px-2 py-1 bg-gray-800 rounded border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-center"
-                />
-                <span>/ {totalPages} {t(language, 'page')}</span>
-                <button
-                  onClick={handlePageSubmit}
-                  className="px-3 py-1 bg-gray-800 text-white rounded hover:bg-gray-700"
-                >
-                  {t(language, 'jump')}
-                </button>
-              </div>
-            )}
-            <div className="flex items-center gap-2 text-white ml-2">
-              <Grid className="w-5 h-5" />
-              <select
-                value={channelsPerPage}
-                onChange={(e) => handleChannelsPerPageChange(parseInt(e.target.value))}
-                className="bg-gray-800 rounded border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-2 py-1"
+        <div className="flex justify-between items-center gap-4">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <div className="flex gap-2 items-center">
+              <button
+                onClick={handlePrevPage}
+                className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 shrink-0"
               >
-                {Array.from({ length: MAX_CHANNELS_PER_PAGE }, (_, i) => i + 1).map(num => (
-                  <option key={num} value={num}>
-                    {num} {t(language, 'channelsPerPage')}
-                  </option>
-                ))}
-              </select>
+                {t(language, 'prevPage')}
+              </button>
+              <button
+                onClick={handleNextPage}
+                className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 shrink-0"
+              >
+                {t(language, 'nextPage')}
+              </button>
+              {!isRandomMode && (
+                <div className="flex items-center gap-2 text-white shrink-0">
+                  <span>{t(language, 'jumpTo')}</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={totalPages}
+                    value={pageInput}
+                    onChange={handlePageInputChange}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handlePageSubmit();
+                      }
+                    }}
+                    className="w-16 px-2 py-1 bg-gray-800 rounded border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-center"
+                  />
+                  <span>/ {totalPages} {t(language, 'page')}</span>
+                  <button
+                    onClick={handlePageSubmit}
+                    className="px-3 py-1 bg-gray-800 text-white rounded hover:bg-gray-700"
+                  >
+                    {t(language, 'jump')}
+                  </button>
+                </div>
+              )}
             </div>
-            <button
-              onClick={toggleRandomMode}
-              className={`px-4 py-2 rounded transition-colors ${
-                isRandomMode 
-                  ? 'bg-blue-600 text-white hover:bg-blue-500' 
-                  : 'bg-gray-800 text-white hover:bg-gray-700'
-              }`}
-              title={isRandomMode ? t(language, 'normalMode') : t(language, 'randomMode')}
-            >
-              <Shuffle className="w-5 h-5" />
-            </button>
-            <div className="text-white ml-4">
-              {t(language, 'totalChannels', { count: channels.length })}
+
+            <div className="h-6 w-px bg-gray-700 mx-2" />
+
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 text-white">
+                <Grid className="w-5 h-5" />
+                <select
+                  value={channelsPerPage}
+                  onChange={(e) => handleChannelsPerPageChange(parseInt(e.target.value))}
+                  className="bg-gray-800 rounded border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-2 py-1"
+                >
+                  {Array.from({ length: MAX_CHANNELS_PER_PAGE }, (_, i) => i + 1).map(num => (
+                    <option key={num} value={num}>
+                      {num} {t(language, 'channelsPerPage')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={toggleRandomMode}
+                className={`px-4 py-2 rounded transition-colors ${
+                  isRandomMode 
+                    ? 'bg-blue-600 text-white hover:bg-blue-500' 
+                    : 'bg-gray-800 text-white hover:bg-gray-700'
+                }`}
+                title={isRandomMode ? t(language, 'normalMode') : t(language, 'randomMode')}
+              >
+                <Shuffle className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setShowChannelList(true)}
+                className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 flex items-center gap-2"
+                title={t(language, 'showAllChannels')}
+              >
+                <List className="w-5 h-5" />
+                {t(language, 'allChannels')}
+              </button>
+            </div>
+
+            <div className="h-6 w-px bg-gray-700 mx-2" />
+
+            <div className="text-white shrink-0">
+              {t(language, 'totalChannels', { count: store.channels.length })}
               {isRandomMode && t(language, 'randomDisplay', { count: channelsPerPage })}
             </div>
-            <button
-              onClick={() => setShowChannelList(true)}
-              className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 flex items-center gap-2"
-              title={t(language, 'showAllChannels')}
-            >
-              <List className="w-5 h-5" />
-              {t(language, 'allChannels')}
-            </button>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setLanguage(prev => prev === 'zh' ? 'en' : 'zh')}
-              className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 flex items-center gap-2"
-            >
-              <Globe2 className="w-5 h-5" />
-              {t(language, 'language')}
-            </button>
-            <button
-              onClick={() => {
+
+          <div className="flex items-center gap-4 shrink-0">
+            <ChannelValidator
+              channels={store.channels}
+              language={language}
+              onValidationComplete={handleValidationComplete}
+            />
+            <Settings
+              language={language}
+              onLanguageChange={() => setLanguage(prev => prev === 'zh' ? 'en' : 'zh')}
+              onM3uUrlClick={() => {
                 setTempUrl(m3uUrl);
                 setShowUrlInput(true);
               }}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
-            >
-              {t(language, 'setM3uUrl')}
-            </button>
+            />
           </div>
         </div>
       </div>
@@ -378,7 +377,7 @@ function App() {
                 onChannelSwitch={handleChannelSwitch}
                 isRandomMode={isRandomMode}
                 language={language}
-                allChannels={channels}
+                allChannels={store.channels}
               />
             ))}
           </div>

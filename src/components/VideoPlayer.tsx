@@ -1,9 +1,10 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Hls from 'hls.js';
-import { Volume2, VolumeX, Maximize2, RefreshCw, Shuffle, List, Search } from 'lucide-react';
+import { Volume2, VolumeX, Maximize2, RefreshCw, Shuffle, List } from 'lucide-react';
 import type { PlayerProps } from '../types';
 import { useStore } from '../store/useStore';
 import { t } from '../locales';
+import { ChannelList } from './ChannelList';
 
 export function VideoPlayer({ 
   channel, 
@@ -23,16 +24,12 @@ export function VideoPlayer({
   const [error, setError] = useState<string | null>(null);
   const [hls, setHls] = useState<Hls | null>(null);
   const [showChannelList, setShowChannelList] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [showControls, setShowControls] = useState(true);
   const hideControlsTimeoutRef = useRef<number | null>(null);
   const currentChannel = useStore(state => state.currentChannel);
   const setCurrentChannel = useStore(state => state.setCurrentChannel);
-
-  const filteredChannels = allChannels.filter(ch => 
-    ch.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ch.group?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const validChannelIds = useStore(state => state.validChannelIds);
+  const hideInvalidChannels = useStore(state => state.hideInvalidChannels);
 
   useEffect(() => {
     setError(null);
@@ -154,7 +151,6 @@ export function VideoPlayer({
     }
   };
 
-  // 重置隐藏控制界面的计时器
   const resetHideControlsTimer = () => {
     if (hideControlsTimeoutRef.current) {
       window.clearTimeout(hideControlsTimeoutRef.current);
@@ -162,10 +158,9 @@ export function VideoPlayer({
     setShowControls(true);
     hideControlsTimeoutRef.current = window.setTimeout(() => {
       setShowControls(false);
-    }, 3000); // 3秒后隐藏
+    }, 3000);
   };
 
-  // 组件挂载时启动计时器
   useEffect(() => {
     resetHideControlsTimer();
     return () => {
@@ -295,42 +290,17 @@ export function VideoPlayer({
                 ✕
               </button>
             </div>
-            <div className="relative mb-4">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t(language, 'searchPlaceholder')}
-                className="w-full px-10 py-2 bg-gray-800 text-white rounded border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              />
-              <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            </div>
             <div className="flex-1 overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredChannels.map((ch) => (
-                  <button
-                    key={ch.id}
-                    onClick={() => {
-                      onChannelSwitch(channel.id, ch);
-                      setShowChannelList(false);
-                      setSearchQuery('');
-                    }}
-                    className={`flex items-center gap-3 p-3 rounded ${
-                      ch.id === channel.id ? 'bg-blue-600 hover:bg-blue-500' : 'bg-gray-800 hover:bg-gray-700'
-                    } transition-colors text-left`}
-                  >
-                    {ch.logo && (
-                      <img src={ch.logo} alt="" className="w-8 h-8 object-contain" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="text-white font-medium truncate">{ch.name}</div>
-                      {ch.group && (
-                        <div className="text-gray-400 text-sm truncate">{ch.group}</div>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
+              <ChannelList
+                channels={allChannels}
+                validChannelIds={validChannelIds}
+                hideInvalidChannels={hideInvalidChannels}
+                onChannelSelect={(selectedChannel) => {
+                  onChannelSwitch(channel.id, selectedChannel);
+                  setShowChannelList(false);
+                }}
+                language={language}
+              />
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-export type Language = 'zh' | 'en';
+import type { Language } from '../types';
 
 export const translations = {
   zh: {
@@ -31,7 +31,12 @@ export const translations = {
     allChannels: '所有频道',
     showAllChannels: '查看所有频道',
     searchPlaceholder: '搜索频道...',
-    pageInfo: '第 {page} 页'
+    pageInfo: '第 {page} 页',
+    startValidation: '验证频道',
+    validating: '验证中...',
+    validChannelsCount: '{valid}/{total} 个频道有效',
+    validationProgress: '已检测 {checked}/{total} 个频道',
+    hideInvalidChannels: '隐藏无效频道',
   },
   en: {
     loading: 'Loading channels...',
@@ -63,7 +68,12 @@ export const translations = {
     allChannels: 'All Channels',
     showAllChannels: 'Show All Channels',
     searchPlaceholder: 'Search channels...',
-    pageInfo: 'Page {page}'
+    pageInfo: 'Page {page}',
+    startValidation: 'Validate Channels',
+    validating: 'Validating...',
+    validChannelsCount: '{valid}/{total} channels valid',
+    validationProgress: 'Checked {checked}/{total} channels',
+    hideInvalidChannels: 'Hide Invalid Channels',
   }
 } as const;
 

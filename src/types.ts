@@ -1,23 +1,25 @@
 import { Language } from './locales';
 
+export type Language = 'zh' | 'en';
+
 export interface Channel {
   id: string;
   name: string;
+  group?: string;
+  logo?: string;
   urls: string[];
   volume: number;
-  logo?: string;
-  group?: string;
   currentSourceIndex?: number;
 }
 
 export interface PlayerProps {
   channel: Channel;
   isFullscreen: boolean;
-  onVolumeChange: (id: string, volume: number) => void;
-  onFullscreenClick: (id: string) => void;
-  onSourceChange?: (id: string, sourceIndex: number) => void;
-  onRandomChannel?: (id: string) => void;
-  onChannelSwitch: (playerId: string, newChannel: Channel) => void;
+  onVolumeChange: (channelId: string, volume: number) => void;
+  onFullscreenClick: (channelId: string) => void;
+  onSourceChange?: (channelId: string, sourceIndex: number) => void;
+  onRandomChannel?: (channelId: string) => void;
+  onChannelSwitch: (fromChannelId: string, toChannel: Channel) => void;
   isRandomMode: boolean;
   language: Language;
   allChannels: Channel[];
@@ -28,4 +30,12 @@ export interface M3UChannel {
   logo: string;
   group: string;
   url: string;
+}
+
+export interface ChannelListProps {
+  channels: Channel[];
+  validChannelIds?: string[];
+  hideInvalidChannels: boolean;
+  onChannelSelect: (channel: Channel) => void;
+  language: Language;
 }
